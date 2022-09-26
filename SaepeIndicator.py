@@ -1,7 +1,7 @@
 # ************************************************************************
-# *  O   Codigo de la interface desarrollado por:                        *
-# * <j>  Jota Ele Copyright (c) 2022                                     *
-# * / \  usando la estrategia del Saepe Indicator creado por @LaAlquimia *
+# *  O   Codigo de la interface grafica desarrollado por:                *
+# * <j>  @JotaEle Copyright (c) 2022                                     *
+# * / \  Creditos a @LaAlquimia creador de la Alquimia Saepe indicator   *
 # ************************************************************************
 from tkinter import END, Tk, Frame, Button, Text, Label, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -134,8 +134,7 @@ def salir():
     exit()
 
 def getSymbolsTradingFutures():
-    # Obtiene la lista completa de todos los simbolos de futuros y solo guarda en la lista:
-    # - Simbolos con status TRADING, tradeables en USDT 
+    # Obtiene la lista completa de los simbolos de futuros tradeables en USDT
     symbols = []
     endPoint = "https://fapi.binance.com/fapi/v1/exchangeInfo"
     resp = r.get(endPoint)
