@@ -1,5 +1,5 @@
 # ************************************************************************
-# *  O   Codigo desarrollado por:                                        *
+# *  O   Codigo de la interface desarrollado por:                        *
 # * <j>  Jota Ele Copyright (c) 2022                                     *
 # * / \  usando la estrategia del Saepe Indicator creado por @LaAlquimia *
 # ************************************************************************
