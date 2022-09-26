@@ -3,7 +3,9 @@
 # * <j>  @JotaEle Copyright (c) 2022                                     *
 # * / \  Creditos a @LaAlquimia creador de la Alquimia Saepe indicator   *
 # ************************************************************************
+from logging import exception
 from tkinter import END, Tk, Frame, Button, Text, Label, ttk
+from tkinter import messagebox as MessageBox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import matplotlib
@@ -34,6 +36,7 @@ matplotlib.rcParams['timezone'] = 'GMT-5'
 plt.subplots_adjust(top=0.9, wspace=0.3, hspace=0.3)
 canvas = FigureCanvasTkAgg(fig, master = frame)  
 canvas.get_tk_widget().pack(padx=5, pady=5 , expand=1, fill='both') 
+tiempoEspera = 1000
 
 def data():
     global df
@@ -80,45 +83,51 @@ def data():
     bypeaks = bypeaks[-npeaks:]
     
 def dibujar():	
-    data()
-    yb = df.close[bypeaks].values
-    xb = bypeaks
-    reg = stats.linregress(xb,yb)
-    ys = df.close[peaks].values
-    xs = peaks
-    regs = stats.linregress(xs,ys)
-    ax[0].clear()
-    ax[0].set_facecolor("#FEFDEB")
-    ax[0].grid(axis = 'y', color = '#FED999', linestyle = 'dashed')
-    ax[1].clear()
-    ax[1].set_facecolor("#FEFDEB")
-    ax[1].grid(axis = 'y', color = '#FED999', linestyle = 'dashed')
-    ax[0].set_title(f"PRECIO {symbol} en {interval}")
-    ax[0].plot(df.closeTime.tail(tail), df.close.tail(tail))
-    ax[0].plot(df.closeTime.tail(tail)[peaks],df.close[peaks],'v', color = 'r')
-    ax[0].plot(df.closeTime.tail(tail)[bypeaks],df.close[bypeaks],'^', color = 'g')
-    ax[0].plot(df.closeTime.tail(tail)[xb], reg.intercept + reg.slope*xb, "--",color='g')
-    ax[0].plot(df.closeTime.tail(tail)[xs], regs.intercept + regs.slope*xs, "--",color='r')
-    
-    yb = df.rsi[bypeaks].values
-    xb = bypeaks
-    reg = stats.linregress(xb,yb)
-    ys = df.rsi[peaks].values
-    xs = peaks
-    regs = stats.linregress(xs,ys)
+    global tiempoEspera
+    try:
+        data()
+        yb = df.close[bypeaks].values
+        xb = bypeaks
+        reg = stats.linregress(xb,yb)
+        ys = df.close[peaks].values
+        xs = peaks
+        regs = stats.linregress(xs,ys)
+        ax[0].clear()
+        ax[0].set_facecolor("#FEFDEB")
+        ax[0].grid(axis = 'y', color = '#FED999', linestyle = 'dashed')
+        ax[1].clear()
+        ax[1].set_facecolor("#FEFDEB")
+        ax[1].grid(axis = 'y', color = '#FED999', linestyle = 'dashed')
+        ax[0].set_title(f"PRECIO {symbol} en {interval}")
+        ax[0].plot(df.closeTime.tail(tail), df.close.tail(tail))
+        ax[0].plot(df.closeTime.tail(tail)[peaks],df.close[peaks],'v', color = 'r')
+        ax[0].plot(df.closeTime.tail(tail)[bypeaks],df.close[bypeaks],'^', color = 'g')
+        ax[0].plot(df.closeTime.tail(tail)[xb], reg.intercept + reg.slope*xb, "--",color='g')
+        ax[0].plot(df.closeTime.tail(tail)[xs], regs.intercept + regs.slope*xs, "--",color='r')
+        
+        yb = df.rsi[bypeaks].values
+        xb = bypeaks
+        reg = stats.linregress(xb,yb)
+        ys = df.rsi[peaks].values
+        xs = peaks
+        regs = stats.linregress(xs,ys)
 
-    ax[1].set_title("Alquimia Saepe Indicator (ASI)")
-    ax[1].plot(df.rsi.tail(tail))
-    ax[1].plot(df.rsi[peaks],'v', color = 'r')
-    ax[1].plot(df.rsi[bypeaks],'^', color = 'g')
-    ax[1].plot(xb, reg.intercept + reg.slope*xb, "--",color='g')
-    ax[1].plot(xs, regs.intercept + regs.slope*xs,"--", color = 'r')
+        ax[1].set_title("Alquimia Saepe Indicator (ASI)")
+        ax[1].plot(df.rsi.tail(tail))
+        ax[1].plot(df.rsi[peaks],'v', color = 'r')
+        ax[1].plot(df.rsi[bypeaks],'^', color = 'g')
+        ax[1].plot(xb, reg.intercept + reg.slope*xb, "--",color='g')
+        ax[1].plot(xs, regs.intercept + regs.slope*xs,"--", color = 'r')        
+    except Exception as e:
+        MessageBox.showinfo("Warning!", f"El gráfico no se puede mostrar, verifique los datos de entrada.")
+        tiempoEspera = 10000
+
     fig.canvas.draw()
     fig.canvas.flush_events()
-    ventana.after(1000,  dibujar)
-    
+    ventana.after(tiempoEspera,  dibujar)
+
 def update_graphic(event):
-    global symbol, interval, rango, npeaks, tail, baseurl
+    global symbol, interval, rango, npeaks, tail, baseurl, tiempoEspera
     symbol = symbol if cbx_symbols.get() == "" else cbx_symbols.get()
     interval = interval if cbx_intervals.get() == "" else cbx_intervals.get()
     rango = rango if inputtxt3.get("1.0", END) == "\n" else inputtxt3.get("1.0", END)
@@ -129,6 +138,7 @@ def update_graphic(event):
     npeaks = int(npeaks)
     tail = int(tail)
     baseurl = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}"
+    tiempoEspera = 1000
 
 def salir():
     exit()
