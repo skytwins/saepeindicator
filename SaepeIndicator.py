@@ -1,6 +1,12 @@
-from tkinter import END, Tk, Frame, Button, Text, Label
+# ************************************************************************
+# *  O   Codigo desarrollado por:                                        *
+# * <j>  Jota Ele Copyright (c) 2022                                     *
+# * / \  usando la estrategia del Saepe Indicator creado por @LaAlquimia *
+# ************************************************************************
+from tkinter import END, Tk, Frame, Button, Text, Label, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
+import matplotlib
 import requests as r 
 import pandas as pd
 from scipy.signal import find_peaks
@@ -11,8 +17,8 @@ interval = '1m'
 symbol='BTCUSDT'
 baseurl = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}"
 tail = 200
-rango = 0.009
-npeaks = 10
+rango = 0.065
+npeaks = 5
 
 ventana = Tk()
 ventana.geometry('900x750')
@@ -24,6 +30,7 @@ frame = Frame(ventana,  bg=background, bd=3)
 frame.pack(expand=1, fill='both')
 fig, ax = plt.subplots(2, facecolor=background)
 plt.style.use(['Solarize_Light2']) 
+matplotlib.rcParams['timezone'] = 'GMT-5'
 plt.subplots_adjust(top=0.9, wspace=0.3, hspace=0.3)
 canvas = FigureCanvasTkAgg(fig, master = frame)  
 canvas.get_tk_widget().pack(padx=5, pady=5 , expand=1, fill='both') 
@@ -39,9 +46,9 @@ def data():
         except:
             time.sleep(2)
 
-    df = pd.DataFrame( eval(resp.text) , columns = ['dateTime','open','high','low','close','','','','','','',''])
-    df.set_index('dateTime')
-    df.dateTime = pd.to_datetime(df.dateTime, unit='ms')
+    df = pd.DataFrame( eval(resp.text) , columns = ['dateTime','open','high','low','close','volume','closeTime','','','','',''])
+    df.set_index('closeTime')
+    df.closeTime = pd.to_datetime(df.closeTime, unit='ms')
     df.close = pd.to_numeric(df.close)
     df['lema'] = df.close.ewm(span=14).mean()
     df['sema'] = df.close.ewm(span=7).mean()
@@ -63,12 +70,12 @@ def data():
     rsi_peaks = 1/ (1 + rsi)
     rsi= rsi.rolling(2).mean()
     df['rsi'] = pd.to_numeric( rsi)
-    dfpeaks = df.rsi.mask( df.rsi<rango)
-    dfpeaksb = df.rsi.mask( df.rsi>-rango)
+    dfpeaks = df.rsi#.mask( df.rsi<rango)
+    dfpeaksb = df.rsi#.mask( df.rsi>-rango)
     global peaks 
     global bypeaks
-    peaks, _ = find_peaks(dfpeaks)
-    bypeaks, _ = find_peaks(-dfpeaksb)
+    peaks, _ = find_peaks(dfpeaks,prominence=rango, width=2)
+    bypeaks, _ = find_peaks(-dfpeaksb, prominence=rango, width=2)
     peaks = peaks[-npeaks:]
     bypeaks = bypeaks[-npeaks:]
     
@@ -87,11 +94,11 @@ def dibujar():
     ax[1].set_facecolor("#FEFDEB")
     ax[1].grid(axis = 'y', color = '#FED999', linestyle = 'dashed')
     ax[0].set_title(f"PRECIO {symbol} en {interval}")
-    ax[0].plot(df.close.tail(tail))
-    ax[0].plot(df.close[peaks],'v', color = 'r')
-    ax[0].plot(df.close[bypeaks],'^', color = 'g')
-    ax[0].plot(xb, reg.intercept + reg.slope*xb, 'g', label='fitted line')
-    ax[0].plot(xs, regs.intercept + regs.slope*xs, 'r', label='fitted line')
+    ax[0].plot(df.closeTime.tail(tail), df.close.tail(tail))
+    ax[0].plot(df.closeTime.tail(tail)[peaks],df.close[peaks],'v', color = 'r')
+    ax[0].plot(df.closeTime.tail(tail)[bypeaks],df.close[bypeaks],'^', color = 'g')
+    ax[0].plot(df.closeTime.tail(tail)[xb], reg.intercept + reg.slope*xb, "--",color='g')
+    ax[0].plot(df.closeTime.tail(tail)[xs], regs.intercept + regs.slope*xs, "--",color='r')
     
     yb = df.rsi[bypeaks].values
     xb = bypeaks
@@ -99,23 +106,24 @@ def dibujar():
     ys = df.rsi[peaks].values
     xs = peaks
     regs = stats.linregress(xs,ys)
+
     ax[1].set_title("Alquimia Saepe Indicator (ASI)")
     ax[1].plot(df.rsi.tail(tail))
     ax[1].plot(df.rsi[peaks],'v', color = 'r')
     ax[1].plot(df.rsi[bypeaks],'^', color = 'g')
-    ax[1].plot(xb, reg.intercept + reg.slope*xb, 'g', label='fitted line')
-    ax[1].plot(xs, regs.intercept + regs.slope*xs, 'r', label='fitted line')
+    ax[1].plot(xb, reg.intercept + reg.slope*xb, "--",color='g')
+    ax[1].plot(xs, regs.intercept + regs.slope*xs,"--", color = 'r')
     fig.canvas.draw()
     fig.canvas.flush_events()
     ventana.after(1000,  dibujar)
     
-def update():
+def update_graphic(event):
     global symbol, interval, rango, npeaks, tail, baseurl
-    symbol = symbol if inputtxt1.get("1.0", "end-1c") == "" else inputtxt1.get("1.0", "end-1c")
-    interval = interval if inputtxt2.get("1.0", "end-1c") == "" else inputtxt2.get("1.0", "end-1c")
-    rango = rango if inputtxt3.get("1.0", "end-1c") == "" else inputtxt3.get("1.0", "end-1c")
-    npeaks = npeaks if inputtxt4.get("1.0", "end-1c") == "" else inputtxt4.get("1.0", "end-1c")
-    tail = tail if inputtxt5.get("1.0", "end-1c") == "" else inputtxt5.get("1.0", "end-1c")
+    symbol = symbol if cbx_symbols.get() == "" else cbx_symbols.get()
+    interval = interval if cbx_intervals.get() == "" else cbx_intervals.get()
+    rango = rango if inputtxt3.get("1.0", END) == "\n" else inputtxt3.get("1.0", END)
+    npeaks = npeaks if cbx_npeaks.get() == "" else cbx_npeaks.get()
+    tail = tail if cbx_tails.get() == "" else cbx_tails.get()
     symbol = symbol.upper()
     rango = float(rango)
     npeaks = int(npeaks)
@@ -125,34 +133,56 @@ def update():
 def salir():
     exit()
 
+def getSymbolsTradingFutures():
+    # Obtiene la lista completa de todos los simbolos de futuros y solo guarda en la lista:
+    # - Simbolos con status TRADING, tradeables en USDT 
+    symbols = []
+    endPoint = "https://fapi.binance.com/fapi/v1/exchangeInfo"
+    resp = r.get(endPoint)
+    respuesta = resp.json()
+    coins = respuesta['symbols']
+    for coin in coins:    
+        symbol = coin["symbol"]
+        status = coin['status']
+        if status == "TRADING" and symbol[-4:] == 'USDT':
+            symbols.append(symbol)
+    return symbols
+
 if __name__ == "__main__":
+    list_symbols = getSymbolsTradingFutures()
+    list_intervals = ['1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', '1M']
+    list_npeaks = [x for x in range(1,11)]
+    list_tails = [100, 200, 300, 400, 500]
     lb1 = Label(frame, text = "Symbol: ", bg = background, fg=foreground)
-    inputtxt1 = Text(frame, height = 1, width = 15, bg = "light yellow") 
-    inputtxt1.insert(END, symbol)
+    cbx_symbols = ttk.Combobox(frame, width=20, state="readonly", values=list_symbols)
+    cbx_symbols.set("BTCUSDT")
     lb2 = Label(frame, text = "Interval: ", bg = background, fg=foreground) 
-    inputtxt2 = Text(frame, height = 1, width = 5, bg = "light yellow") 
-    inputtxt2.insert(END, interval)
+    cbx_intervals = ttk.Combobox(frame, width=6, state="readonly", values=list_intervals)
+    cbx_intervals.set("1m")
     lb3 = Label(frame, text = "Range: ", bg = background, fg=foreground) 
-    inputtxt3 = Text(frame, height = 1, width = 5, bg = "light yellow") 
+    inputtxt3 = Text(frame, height = 1, width = 6, bg = "light yellow") 
     inputtxt3.insert(END, rango)
     lb4 = Label(frame, text = "Npeaks: ", bg = background, fg=foreground) 
-    inputtxt4 = Text(frame, height = 1, width = 5, bg = "light yellow") 
-    inputtxt4.insert(END, npeaks)
+    cbx_npeaks = ttk.Combobox(frame, width=6, state="readonly", values=list_npeaks)
+    cbx_npeaks.set("5")
     lb5 = Label(frame, text = "Tail: ", bg = background, fg=foreground) 
-    inputtxt5 = Text(frame, height = 1, width = 5, bg = "light yellow") 
-    inputtxt5.insert(END, tail)
+    cbx_tails = ttk.Combobox(frame, width=6, state="readonly", values=list_tails)
+    cbx_tails.set(200)
     lb1.pack(side='left',expand=1)
-    inputtxt1.pack(side='left',expand=1)
+    cbx_symbols.pack(side='left',expand=1)
     lb2.pack(side='left',expand=1)
-    inputtxt2.pack(side='left',expand=1)
+    cbx_intervals.pack(side='left',expand=1)
     lb3.pack(side='left',expand=1)
     inputtxt3.pack(side='left',expand=1)
     lb4.pack(side='left',expand=1)
-    inputtxt4.pack(side='left',expand=1)
+    cbx_npeaks.pack(side='left',expand=1)
     lb5.pack(side='left',expand=1)
-    inputtxt5.pack(side='left',expand=1)
-    Button(frame, text='Actualizar', width = 15, bg='green',fg='white', command=update).pack(pady =5,side='left',expand=1)
-    Button(frame, text='Salir', width = 15, bg='green',fg='white', command=salir).pack(pady =5,side='left',expand=1)
+    cbx_tails.pack(side='left',expand=1)
+    cbx_symbols.bind("<<ComboboxSelected>>", update_graphic)
+    cbx_intervals.bind("<<ComboboxSelected>>", update_graphic)
+    inputtxt3.bind('<KeyRelease>', update_graphic)
+    cbx_npeaks.bind("<<ComboboxSelected>>", update_graphic)
+    cbx_tails.bind("<<ComboboxSelected>>", update_graphic)
+    Button(frame, text='Salir', width = 15, bg='green',fg='white', command=salir).pack(pady=5,side='left',expand=1)
     dibujar()
-    #ventana.after(1000,  dibujar)
     ventana.mainloop()
